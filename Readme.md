@@ -30,17 +30,18 @@ link: https://www.kaggle.com/datasets/kukuroo3/body-performance-data
     - In this step we import the data set, look for the types and structure of the data, handle the missing values and find summary details about the dataset.
     - And also we partition data in to two sets in this step.
     - Four physiological and Four exercise variables are partitioned in to two sets.
-Physiological variables (Y) : Age , Height , Weight , Body fat percentage Exercise variables (X) : Grip Force, Sit and bend forward , Sit-ups , Broad jump
-o Standardizing the data.
+        - Physiological variables (Y) : Age , Height , Weight , Body fat percentage
+        - Exercise variables (X) : Grip Force, Sit and bend forward , Sit-ups , Broad jump
+    - Standardizing the data.
 - STEP 2: Multivariate Normality Assumption Checking
-o In this step we check the multivariate normality assumption and univariate variable normality of each variable using mardia’s test and Henze-Zirkler's test.
+    - In this step we check the multivariate normality assumption and univariate variable normality of each variable using mardia’s test and Henze-Zirkler's test.
 - STEP 3: Perform Canonical Correlation
-o In this step we perform canonical correlation using R statistical software.
+    - In this step we perform canonical correlation using R statistical software.
 - STEP 4: Obtain Normalized Canonical Correlations
-o Canonical variates are normalized to have Var(U) = 1 and Var(V) = 1.
+    - Canonical variates are normalized to have Var(U) = 1 and Var(V) = 1.
 - STEP 5: Test the Significance of Canonical Correlations
-o In this step we calculate p-values using the F-approximations of different test statistics such as ‘Wilks’, ‘Hotelling’, ‘Pillai’ and ‘Roy’ and find significant canonical correlations.
-o Plot the significant canonical correlations.
+    - In this step we calculate p-values using the F-approximations of different test statistics such as ‘Wilks’, ‘Hotelling’, ‘Pillai’ and ‘Roy’ and find significant canonical correlations.
+    - Plot the significant canonical correlations.
 - STEP 6: Find the Canonical Loadings Matrix
-o In this step we find the potential coefficients on the canonical linear relationships.
+    - In this step we find the potential coefficients on the canonical linear relationships.
 - STEP 7: Find the Canonical Variates
