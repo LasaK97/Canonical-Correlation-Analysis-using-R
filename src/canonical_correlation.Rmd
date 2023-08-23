@@ -1,0 +1,364 @@
+---
+title: "Mini Project 02"
+author: "Lasantha Kulasooriya(S/17/404)"
+date: "2023-07-28"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Canonical Correlation Analysis
+
+### 1. Data Preprocessing
+
+```{r}
+#import data set
+data <- read.csv('../data/bodyPerformance.csv',skip=1, col.names = c("Age", "Gender","Height", "Weight", "Bodyfat", "Dialostic","Systolic", "Gripforce", "SitandBend", "Situps", "Broadjumps", "Class"))
+head(data)
+```
+
+```{r}
+#dimensions
+dim(data)
+```
+
+-   The data set contains 13393 rows in 12 columns.
+
+```{r}
+#structure of the dataset
+str(data)
+```
+
+-   Data set contains two character variables and ten numerical variables.
+
+```{r}
+#missing values
+library(mice)
+```
+
+```{r}
+miss.count <- function(x){
+  sort(colSums(is.na(x)), decreasing = TRUE )
+}
+miss.count(data)
+```
+
+```{r}
+md.pattern(data, rotate.names = TRUE, plot = TRUE)
+```
+
+-   Data set contains no any missing values.
+
+```{r}
+#summary of the data set
+summary(data)
+```
+
+```{r}
+library(dplyr)
+data<- data %>% 
+    select( -Gender, -Dialostic,-Systolic, -Class)
+```
+
+```{r}
+head(data)
+```
+
+-   Four physiological and Four exercise variables are measured by Korean sports promotion foundation.\
+    Physiological variables (Y) : Age , Height , Weight , Body fat percentage\
+    Exercise variables (X) : Grip Force, Sit and bend forward , Sit-ups , Broad jump
+
+```{r}
+#divide the data set in to two sets as physiology and exercise by combining the relevant variables.
+
+physiology.set <- select(data, Age, Height, Weight, Bodyfat)
+exercise.set <- select(data, Gripforce, SitandBend, Situps, Broadjumps)
+```
+
+```{r}
+#pshciology
+head(physiology.set)
+```
+
+```{r}
+#exercise
+head(exercise.set)
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
+
+physiology_long <- pivot_longer(physiology.set, cols = everything(), names_to = "physiology", values_to = "value")
+exercise_long <- pivot_longer(exercise.set, cols = everything(), names_to = "exercise", values_to = "value")
+
+# boxplot for physiology set
+physiology_plot <- ggplot(physiology_long, aes(x = physiology, y = value, fill = physiology)) +
+  geom_boxplot() +
+  labs(title = "Physiological variables", x = "Variables", y = "Value") +
+  scale_fill_manual(values = c("red", "green", "royalblue2","yellow")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+# boxplot for exercise set
+exercise_plot <- ggplot(exercise_long, aes(x = exercise, y = value, fill = exercise)) +
+  geom_boxplot() +
+  labs(title = "Exercise variables", x = "Variables", y = "Value") +
+  scale_fill_manual(values = c("red", "sienna", "palevioletred1", "royalblue2")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+
+grid.arrange(physiology_plot, exercise_plot, ncol = 2)
+
+```
+
+-   There are so many outliers in the dataset.
+
+```{r}
+library(CCA)
+cormat=matcor(exercise.set,physiology.set)
+cormat
+```
+
+```{r}
+img.matcor(cormat, type=2)
+```
+
+-   Among the exersice set(X) highest positive correlation exists between the situps and broadjumps. And also between the gripforce and sitandbend exersices there is low negative correlation.
+
+-   Among the physiology set(Y) highest negative correlation exists between Age and weight.
+
+-   When considering the correlation between X set of variables with Y set of variables, among most of them have only moderate positive correlations.
+
+Before applying the canonical correlation analysis, we need to check the multivariate normality of data.
+
+### 2. Test the Assumption of Normality
+
+```{r}
+library(MVN)
+# Madia test for multivariate normality
+mvn(data = data,subset = NULL,mvnTest = "mardia")
+```
+
+```{r}
+# Henze-Zirkler's test for multivariate normality
+mvn(data = data,subset = NULL,mvnTest = "hz")
+```
+
+-   According Mardia's test and Henze-Zirkler's test, we can observe that the multivariate normality is not there. By Anderson-Darling test we can observe that all the variables are non-normal. The reason may be the outliers.
+
+```{r}
+result<-mvn(data = data,multivariateOutlierMethod = "adj",
+showOutliers = TRUE, showNewData = TRUE)
+```
+
+-   There are 923 outliers and the observation 3355 and 2657 are extreme outliers.
+
+```{r}
+#remove outliers using standarization 
+remove_outliers<- function(df, cols = names(df)) {
+  for (col in cols) {
+    col_mean <- mean(df[[col]])
+    col_std <- sd(df[[col]])
+    df[[col]] <- (df[[col]] - col_mean) / col_std
+  
+    threshold <- 2
+    
+    df <- df[abs(df[[col]]) <= threshold, ]
+    df[[col]] <- df[[col]] * col_std + col_mean
+  }
+  
+  return(df)
+}
+```
+
+```{r}
+data.new <- remove_outliers(data)
+```
+
+```{r}
+dim(data.new)
+```
+
+```{r}
+# mardia test for multivariate normality
+mvn(data = data.new,subset = NULL,mvnTest = "mardia")
+```
+
+```{r}
+# Henze-Zirkler's test for multivariate normality
+mvn(data = data.new,subset = NULL,mvnTest = "hz")
+```
+
+Outliers removed data also violates the multivariate normality assumption.
+
+```{r}
+# Anderson-Darling test to check univariate normality
+mvn_un <- mvn(data = data.new, univariateTest = "AD" , desc=T)
+mvn_un$univariateNormality
+```
+
+According to the above tests we confirms that all the variables are non-normal. Transforming data to achieve univariate normality.
+
+```{r}
+data.new[data.new <= 0] <- 0.001   
+
+```
+
+```{r}
+#Log transformation
+data.log= log(data.new)
+```
+
+```{r}
+# Anderson-Darling test to check univariate normality
+mvn_un.log <- mvn(data = data.log, univariateTest = "AD" , desc=T)
+mvn_un.log$univariateNormality
+```
+
+```{r}
+# mardia test for multivariate normality
+mvn(data = data.log,subset = NULL,mvnTest = "mardia")
+```
+
+```{r}
+# Henze-Zirkler's test for multivariate normality
+mvn(data = data.log,subset = NULL,mvnTest = "hz")
+```
+
+Both multivariate and univariate noramality assumptions are violated. Now by assuming multivariate normality.
+
+### 3. Canonical Correlations
+
+```{r}
+str(data.new)
+```
+
+```{r}
+library(dplyr)
+physiology.set.new <- data.new[,1:4]
+exercise.set.new <- data.new[,-(1:4)]
+```
+
+```{r}
+# canonical correlations
+library(CCP)
+cca.raw <- cancor(physiology.set.new, exercise.set.new)
+cca.raw
+```
+
+### 4. Normalized Canonical Correlations
+
+```{r}
+# normalized canonical correlations
+cca.scaled<-cancor(scale(physiology.set.new, scale=T, center=T),scale(exercise.set.new, scale=T,center=T))
+cca.scaled
+```
+
+-   The canonical correlations are the same, but the coefficients of canonical variates are normalized to have Var(U) = 1 and Var(V) = 1.
+
+### 5. Test the significance of Canonical Correlations
+
+```{r}
+dim(data.new)
+```
+
+```{r}
+rho <- cca.scaled$cor
+# Calculate p-values using the F-approximations of different test statistics:
+p.asym(rho,10543,4,4,tstat="Wilks")
+```
+
+```{r}
+p.asym(rho,10543,4,4, tstat = "Hotelling")
+```
+
+```{r}
+p.asym(rho,10543,4,4, tstat = "Pillai")
+```
+
+```{r}
+p.asym(rho, 10543,4,4, tstat = "Roy")
+```
+
+```{r}
+# Plot the F-approximation for Wilks' Lambda, considering 3, 2, or 1 canonical correlation(s):
+res1 <- p.asym(rho,10543,4,4)
+```
+
+```{r}
+plt.asym(res1,rhostart=1)
+```
+
+```{r}
+plt.asym(res1,rhostart=2)
+```
+
+```{r}
+plt.asym(res1,rhostart=3)
+```
+
+```{r}
+plt.asym(res1,rhostart=4)
+```
+
+-   All the 4 canonical correlations are significant at 5% level of significance.
+
+### 6. Canonical Correlation Plots
+
+#### 6.1 First Canonical Correlation Plot
+
+```{r}
+xx<-scale(physiology.set.new,scale=T,center=T)
+yy<-scale(exercise.set.new,scale=T,center=T)
+scorex<-xx%*%cca.scaled$xcoef[,1]
+scorey<-yy%*%cca.scaled$ycoef[,1]
+plot(scorex,scorey,type="n")
+text(scorex,scorey,row.names(data.new),cex=.6)
+```
+
+#### 6.2 Second Canonical Correlation Plot
+
+```{r}
+xx<-scale(physiology.set.new,scale=T,center=T)
+yy<-scale(exercise.set.new,scale=T,center=T)
+scorex<-xx%*%cca.scaled$xcoef[,2]
+scorey<-yy%*%cca.scaled$ycoef[,2]
+plot(scorex,scorey,type="n")
+text(scorex,scorey,row.names(data.new),cex=.6)
+```
+
+#### 6.3 Third Canonical Correlation Plot
+
+```{r}
+xx<-scale(physiology.set.new,scale=T,center=T)
+yy<-scale(exercise.set.new,scale=T,center=T)
+scorex<-xx%*%cca.scaled$xcoef[,3]
+scorey<-yy%*%cca.scaled$ycoef[,3]
+plot(scorex,scorey,type="n")
+text(scorex,scorey,row.names(data.new),cex=.6)
+```
+
+#### 6.4 Fourth Canonical Correlation Plot
+
+```{r}
+xx<-scale(physiology.set.new,scale=T,center=T)
+yy<-scale(exercise.set.new,scale=T,center=T)
+scorex<-xx%*%cca.scaled$xcoef[,4]
+scorey<-yy%*%cca.scaled$ycoef[,4]
+plot(scorex,scorey,type="n")
+text(scorex,scorey,row.names(data.new),cex=.6)
+```
+
+### 7. Canonical Loadings
+
+```{r}
+cancor<-cc(physiology.set.new, exercise.set.new)
+comput(physiology.set.new, exercise.set.new,cancor)[3:6]
+```
